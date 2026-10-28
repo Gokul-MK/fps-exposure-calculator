@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPS vs Exposure Time — Interactive Calculator</title>
+<style>
+:root{--navy:#123056;--blue:#2269b4;--teal:#008291;--pale:#edf4fa;--ink:#28303a;--muted:#5f6973;--green:#238255;--red:#be3737}
+*{box-sizing:border-box}body{margin:0;background:#f5f8fb;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:900px;margin:28px auto;padding:24px;background:white;border-radius:20px;box-shadow:0 10px 35px #12305618}
+h1{margin:0;color:var(--navy);font-size:clamp(1.6rem,4vw,2.5rem)}.intro{color:var(--muted);margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:24px}
+.card{padding:18px;border:1px solid #d7e1eb;border-radius:14px;background:#fbfdff}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}.value{font-size:1.5rem;font-weight:750;color:var(--blue);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;margin:20px 0;accent-color:var(--blue)}.ends{display:flex;justify-content:space-between;color:var(--muted);font-size:.8rem}
+.metric{padding:16px;border-radius:12px;background:var(--pale);margin-top:14px}.metric strong{display:block;font-size:1.7rem;color:var(--navy);font-variant-numeric:tabular-nums}
+.status{padding:15px;border-radius:12px;margin-top:18px;font-weight:650}.ok{background:#e8f6ee;color:#17643e}.warn{background:#fff0ef;color:#9d2525}
+small{color:var(--muted);line-height:1.5;display:block;margin-top:16px}.bar{height:12px;background:#e4eaf0;border-radius:99px;overflow:hidden;margin-top:12px}.fill{height:100%;width:0;background:var(--teal);transition:width .15s}
+button{background:var(--navy);color:white;border:0;padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:650}button:hover{opacity:.9}
+@media(max-width:600px){main{margin:10px;padding:18px}.value{font-size:1.25rem}}
+</style>
+</head>
+<body><main>
+<h1>FPS vs Exposure Time</h1>
+<p class="intro">Interactive camera timing calculator for ISP tuning and PQ testing. Adjust either slider to update the calculations instantly.</p>
+<div class="grid">
+<section class="card">
+<div class="row"><label for="fps"><b>Frame rate</b></label><span class="value" id="fpsOut">30 FPS</span></div>
+<input id="fps" type="range" min="1" max="240" step="1" value="30">
+<div class="ends"><span>1 FPS</span><span>120 FPS</span><span>240 FPS</span></div>
+<div class="metric"><span>Frame period</span><strong id="period">33.33 ms</strong></div>
+</section>
+<section class="card">
+<div class="row"><label for="exp"><b>Exposure time</b></label><span class="value" id="expOut">10.0 ms</span></div>
+<input id="exp" type="range" min="0.1" max="100" step="0.1" value="10">
+<div class="ends"><span>0.1 ms</span><span>50 ms</span><span>100 ms</span></div>
+<div class="metric"><span>Nominal time remaining</span><strong id="remaining">23.33 ms</strong></div>
+</section>
+</div>
+<div id="status" class="status ok">Fits within the theoretical frame period.</div>
+<div class="grid">
+<section class="card"><div class="row"><b>Exposure duty cycle</b><span id="dutyText">30.0%</span></div><div class="bar"><div class="fill" id="dutyBar"></div></div><small>Exposure time ÷ frame period × 100. Values above 100% exceed the simple continuous-capture frame period.</small></section>
+<section class="card"><b>Quick presets</b><p style="display:flex;gap:8px;flex-wrap:wrap"><button data-fps="30" data-exp="10">30 FPS · 10 ms</button><button data-fps="60" data-exp="5">60 FPS · 5 ms</button><button data-fps="120" data-exp="2">120 FPS · 2 ms</button><button data-fps="30" data-exp="40">30 FPS · 40 ms</button></p><small>Presets are examples, not universal camera specifications.</small></section>
+</div>
+<small><b>Important:</b> This calculator uses the theoretical relationship frame period = 1000 ÷ FPS. Actual exposure limits depend on sensor readout, blanking intervals, trigger mode, firmware, and camera implementation. Check the camera’s reported FPS and applied exposure value.</small>
+</main>
+<script>
+const fps=document.getElementById('fps'), exp=document.getElementById('exp');
+const $=id=>document.getElementById(id);
+function update(){
+ const f=Number(fps.value), e=Number(exp.value), p=1000/f, rem=p-e, duty=e/p*100;
+ $('fpsOut').textContent=f+' FPS'; $('expOut').textContent=e.toFixed(1)+' ms';
+ $('period').textContent=p.toFixed(2)+' ms';
+ $('remaining').textContent=(rem>=0?rem.toFixed(2)+' ms':'−'+Math.abs(rem).toFixed(2)+' ms');
+ $('dutyText').textContent=duty.toFixed(1)+'%'; $('dutyBar').style.width=Math.min(100,duty)+'%';
+ const status=$('status');
+ if(e<=p){status.className='status ok';status.textContent='Fits within the theoretical frame period.'}
+ else{status.className='status warn';status.textContent='Exposure exceeds the theoretical frame period. The requested FPS may not be achievable in continuous capture.'}
+}
+fps.addEventListener('input',update);exp.addEventListener('input',update);
+document.querySelectorAll('button[data-fps]').forEach(b=>b.addEventListener('click',()=>{fps.value=b.dataset.fps;exp.value=b.dataset.exp;update()}));
+update();
+</script></body></html>
